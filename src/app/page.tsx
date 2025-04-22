@@ -10,6 +10,7 @@ export default function Home() {
   const [textboxValid, setTextboxValid] = useState(true);
   const [showComments, setShowComments] = useState<number|null>(null)
   const [commentInput, setCommentInput] = useState('');
+  const [commentInputValid, setCommentInputValid] = useState(true);
   const [comments, setComments] = useState<any[]|null>(null)
 
   const updateMessages = () => {
@@ -27,6 +28,7 @@ export default function Home() {
   }, []);
 
   const handleExpandTextBox = () => {
+    setTextboxInput('');
     setTextboxExpanded(!textboxExpanded);
   };
 
@@ -35,7 +37,7 @@ export default function Home() {
     try {
       const value = textboxInput;
       // Regular expression to check for emoji characters
-      const emojiRegex = /[\p{Emoji}]/u;
+      const emojiRegex = /^([\p{Emoji}\s\n]+)$/u;
 
       console.log(value)
       // Validate input: only allow emojis
@@ -82,14 +84,37 @@ export default function Home() {
 
   useEffect(()=>{
     const value = textboxInput;
-    const emojiRegex = /^([\p{Emoji}\s]+)$/u;
+    const emojiRegex = /^([\p{Emoji}\s\n]+)$/u;
 
     if (emojiRegex.test(value)) {
-      if (!textboxValid) setTextboxValid(true)
+      if (!textboxValid) {
+        setTextboxValid(true)
+        console.log("valid")
+      }
     } else {
-      if (textboxValid) setTextboxValid(false)
+      if (textboxValid) {
+        setTextboxValid(false)
+        console.log("invalid")
+      }
     }
   }, [textboxInput])
+
+  useEffect(()=>{
+    const value = commentInput;
+    const emojiRegex = /^([\p{Emoji}\s\n]+)$/u;
+
+    if (emojiRegex.test(value)) {
+      if (!commentInputValid) {
+        setCommentInputValid(true)
+        console.log("valid")
+      }
+    } else {
+      if (commentInputValid) {
+        setCommentInputValid(false)
+        console.log("invalid")
+      }
+    }
+  }, [commentInput])
 
   const convertNumberToEmoji = (number: string) => {
     const digits = String(number).split('');
@@ -124,9 +149,10 @@ export default function Home() {
     }
   }
 
-  const handleSubmitComment  = async (e: React.ChangeEvent<any>) => {
+  const handleSubmitComment = async (e: React.ChangeEvent<any>) => {
     e.preventDefault();
     try {
+      if (!commentInputValid) return;
       if (showComments == null) return;
 
       const lines = commentInput.split('\n');
@@ -152,11 +178,66 @@ export default function Home() {
         body: JSON.stringify(payload)
       });
       //console.log('Response:', response.json);
-      setTextboxInput(''); // Clear the input after submission
-      setTextboxExpanded(false); // Optionally collapse after submission
+      setCommentInput(''); // Clear the input after submission
       //updateMessages();
       loadComments(showComments);
       data.find(i => i.id == showComments).totalChildrenCount += 1;
+    } catch (error) {
+      //console.error('Error:', error);
+    }
+  };
+
+  const handleTranslate = async (e: React.ChangeEvent<any>) => {
+    e.preventDefault();
+    try {
+
+      const content = textboxInput
+
+      const payload = {
+        content
+      };
+
+      //console.log(payload)
+    
+      const response = await fetch('http://172.26.87.217:8080/message/translate', {
+        method: 'POST',
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(payload)
+      }).then((response) => response.json())
+        .then((data) => {
+        setTextboxInput(data.text.replace(/[^\p{Emoji}\s]+/gu, '').replace(/\s{2,}/g, ' '));
+      });
+      //updateMessages();
+    } catch (error) {
+      //console.error('Error:', error);
+    }
+  };
+
+  const handleTranslateComment = async (e: React.ChangeEvent<any>) => {
+    e.preventDefault();
+    try {
+
+      const content = commentInput
+
+      const payload = {
+        content
+      };
+
+      //console.log(payload)
+    
+      const response = await fetch('http://172.26.87.217:8080/message/translate', {
+        method: 'POST',
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(payload)
+      }).then((response) => response.json())
+        .then((data) => {
+        setCommentInput(data.text.replace(/[^\p{Emoji}\s]+/gu, '').replace(/\s{2,}/g, ' '));
+      });
+      //updateMessages();
     } catch (error) {
       //console.error('Error:', error);
     }
@@ -169,16 +250,16 @@ export default function Home() {
           💬
         </div>
         <div className="h-screen rounded-lg border border-gray-700 overflow-hidden">
-          <div className="h-full flex flex-col w-100 max-w-[500px] bg-white dark:bg-[#181818] divide-y divide-gray-700 overflow-y-scroll">
+          <div className="h-full flex flex-col w-100 max-w-[500px] max-w-screen bg-white dark:bg-[#181818] divide-y divide-gray-700 overflow-y-scroll">
             {
               !loading &&
               data.map((e) => (
                 <div key={e.id} className="px-3 py-1">
                   <p>{e.title}</p>
                   <p>{e.content}</p>
-                  <p onClick={()=>{toggleComments(e.id)}}>💬{convertNumberToEmoji(e.totalChildrenCount)}</p>
+                  <p className="cursor-pointer" onClick={()=>{toggleComments(e.id)}}>💬{convertNumberToEmoji(e.totalChildrenCount)}</p>
                   <div
-                      className={`overflow-hidden transition-all duration-300 ease-in-out ${
+                      className={`transition-all duration-300 ease-in-out ${
                         showComments == e.id ? 'max-h-full opacity-100' : 'w-0 max-h-0 opacity-0'
                       }`}
                     >
@@ -188,26 +269,36 @@ export default function Home() {
                       }
                       {
                         comments != null &&
-                        <div className="px-3 py-1">
-                          <form id="comment-form" onSubmit={handleSubmitComment} className="flex">
-                            <input
-                              value={commentInput}
-                              onChange={(e) => setCommentInput(e.target.value)}
-                              className="h-auto grow ps-1 me-2 border border-gray-300 rounded-lg"
-                              placeholder="🗣️🗣️🗣️"
-                              required
-                              onInvalid={e => (e.target as HTMLInputElement).setCustomValidity('‼️')}
-                              onInput={e => (e.target as HTMLInputElement).setCustomValidity('')}
-                            />
-                            
-                            <button
-                              form="comment-form"
-                              type="submit"
-                              className={`bg-green-500 text-white rounded-lg focus:outline-none rounded-lg bg-blue-500 text-white p-1`}
-                            >
-                              📢
-                            </button>
-                          </form>
+                        <div className="ps-3 py-1">
+                          <div className="relative">
+                            <form id="comment-form" onSubmit={handleSubmitComment} className="flex border rounded-lg">
+                              <input
+                                value={commentInput}
+                                onChange={(e) => setCommentInput(e.target.value)}
+                                className="h-auto grow ps-1 me-2 accent-transparent focus:outline-hidden"
+                                placeholder="🗣️🗣️🗣️"
+                                required
+                                onInvalid={e => (e.target as HTMLInputElement).setCustomValidity('‼️🚫🔤')}
+                                onInput={e => (e.target as HTMLInputElement).setCustomValidity('')}
+                              />
+                              <button
+                                onClick={handleTranslateComment}
+                                className={`bg-transparent cursor-pointer rounded-lg focus:outline-none rounded-lg`}
+                              >
+                                🤖
+                              </button>
+                              <button
+                                form="comment-form"
+                                type="submit"
+                                className={`bg-transparent text-white rounded-lg focus:outline-none rounded-lg bg-blue-500 text-white p-1`}
+                              >
+                                📢
+                              </button>
+                            </form>
+                            <div className={`absolute inset-x-0 -top-6 w-full text-right transition duration-500 ${ commentInputValid ? 'opacity-0' : 'opacity-100' }`}>
+                              ‼️🚫🔤
+                            </div>
+                          </div>
                           {
                             comments.map((e) => (
                               <div key={e.id} className="mt-2">
@@ -247,25 +338,26 @@ export default function Home() {
         >
           <form id="text-form" onSubmit={handleSubmit} className="">
             <textarea
+              title="🚫🔤"
               value={textboxInput}
               style={{resize: "none"}}
-              onChange={handleChange}
-              className="h-auto w-full p-2 rounded-lg accent-transparen focus:outline-hidden"
+              onChange={(e)=>{
+                handleChange(e);
+                /*
+                const value = textboxInput;
+                  const emojiRegex = /^[\p{Emoji}\s\n]+$/u
+                  if (emojiRegex.test(value) || value === '') {
+                    console.log('qweqweqwe');
+                    (e.target as HTMLTextAreaElement).setCustomValidity('')
+                  } else {
+                    console.log('kkk');
+                    (e.target as HTMLTextAreaElement).setCustomValidity('🚫🔤')
+                }*/
+              }}
+              className="h-auto w-50 sm:w-100 p-2 rounded-lg accent-transparent focus:outline-hidden"
               placeholder="🗣️🗣️🗣️"
               required
               //onInvalid={e => (e.target as HTMLInputElement).setCustomValidity('‼️')}
-              onInput={
-                e => {
-                  const value = textboxInput;
-                  const emojiRegex = /[\p{Emoji}]/u;
-                  if (emojiRegex.test(value) || value === '') {
-                    (e.target as HTMLInputElement).setCustomValidity('')
-                  } else {
-                    (e.target as HTMLInputElement).setCustomValidity('🚫🔤')
-                    return;
-                  }
-                }
-              }
             />
             
           </form>
@@ -292,8 +384,7 @@ export default function Home() {
 
           <div className="flex">
             <button
-              form="text-form"
-              type="submit"
+              onClick={handleTranslate}
               className={`bg-transparent cursor-pointer rounded-lg focus:outline-none rounded-lg text-white transition duration-300 ${
                 textboxExpanded ? '' : 'hidden'
               }`}
