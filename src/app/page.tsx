@@ -1,20 +1,26 @@
 'use client'
-import Image from "next/image";
 import { useState, useEffect } from 'react';
 
 export default function Home() {
   const [data, setData] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+
   const [textboxExpanded, setTextboxExpanded] = useState(false);
   const [textboxInput, setTextboxInput] = useState('');
   const [textboxValid, setTextboxValid] = useState(true);
+
+  const [topTextboxExpanded, setTopTextboxExpanded] = useState(false);
+  const [topTextboxInput, setTopTextboxInput] = useState('');
+  const [topTextboxValid, setTopTextboxValid] = useState(true);
+
   const [showComments, setShowComments] = useState<number|null>(null)
   const [commentInput, setCommentInput] = useState('');
   const [commentInputValid, setCommentInputValid] = useState(true);
   const [comments, setComments] = useState<any[]|null>(null)
+  const api_url = process.env.NEXT_PUBLIC_API_URL;
 
   const updateMessages = () => {
-    fetch('http://172.26.87.217:8080/message/top')
+    fetch(api_url + '/message/top')
       .then((response) => response.json())
       .then((data) => {
         console.log(data)
@@ -62,7 +68,7 @@ export default function Home() {
 
       //console.log(payload)
     
-      const response = await fetch('http://172.26.87.217:8080/message/add', {
+      const response = await fetch(api_url + '/message/add', {
         method: 'POST',
         headers: {
           "Content-Type": "application/json",
@@ -78,8 +84,58 @@ export default function Home() {
     }
   };
 
+  const handleSubmitTopTextbox = async (e: React.ChangeEvent<any>) => {
+    e.preventDefault();
+    try {
+      const value = topTextboxInput;
+      // Regular expression to check for emoji characters
+      const emojiRegex = /^([\p{Emoji}\s\n]+)$/u;
+
+      console.log(value)
+      // Validate input: only allow emojis
+      if (emojiRegex.test(value) || value === '') {
+
+      } else {
+        console.log("Only emojis")
+        return;
+      }
+      
+
+      const lines = topTextboxInput.split('\n');
+      const title = lines[0]; // First line as title
+      const content = lines.slice(1).join('\n'); // Rest as contents
+      const time = new Date().toISOString(); // Current datetime in ISO format
+
+      const payload = {
+        title,
+        content,
+        time,
+      };
+
+      //console.log(payload)
+    
+      const response = await fetch(api_url + '/message/add', {
+        method: 'POST',
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(payload)
+      });
+      //console.log('Response:', response.json);
+      setTopTextboxInput(''); // Clear the input after submission
+      updateMessages();
+    } catch (error) {
+      console.error('Error:', error);
+    }
+  };
+
+
   const handleChange = (e: React.ChangeEvent<any>) => {
     setTextboxInput(e.target.value)
+  };
+
+  const handleChangeTopTextbox = (e: React.ChangeEvent<any>) => {
+    setTopTextboxInput(e.target.value)
   };
 
   useEffect(()=>{
@@ -98,6 +154,23 @@ export default function Home() {
       }
     }
   }, [textboxInput])
+
+  useEffect(()=>{
+    const value = topTextboxInput;
+    const emojiRegex = /^([\p{Emoji}\s\n]+)$/u;
+
+    if (emojiRegex.test(value)) {
+      if (!topTextboxValid) {
+        setTopTextboxValid(true)
+        console.log("valid")
+      }
+    } else {
+      if (topTextboxValid) {
+        setTopTextboxValid(false)
+        console.log("invalid")
+      }
+    }
+  }, [topTextboxInput])
 
   useEffect(()=>{
     const value = commentInput;
@@ -129,7 +202,7 @@ export default function Home() {
   }
 
   const loadComments = (id: number) => {
-    fetch('http://172.26.87.217:8080/message/top?parentId='+id)
+    fetch(api_url + '/message/top?parentId='+id)
       .then((response) => response.json())
       .then((data) => {
         console.log(data)
@@ -170,7 +243,7 @@ export default function Home() {
 
       //console.log(payload)
     
-      const response = await fetch('http://172.26.87.217:8080/message/add', {
+      const response = await fetch(api_url + '/message/add', {
         method: 'POST',
         headers: {
           "Content-Type": "application/json",
@@ -199,7 +272,7 @@ export default function Home() {
 
       //console.log(payload)
     
-      const response = await fetch('http://172.26.87.217:8080/message/translate', {
+      const response = await fetch(api_url + '/message/translate', {
         method: 'POST',
         headers: {
           "Content-Type": "application/json",
@@ -208,6 +281,34 @@ export default function Home() {
       }).then((response) => response.json())
         .then((data) => {
         setTextboxInput(data.text.replace(/[^\p{Emoji}\s]+/gu, '').replace(/\s{2,}/g, ' '));
+      });
+      //updateMessages();
+    } catch (error) {
+      //console.error('Error:', error);
+    }
+  };
+
+  const handleTranslateTopTextbox = async (e: React.ChangeEvent<any>) => {
+    e.preventDefault();
+    try {
+
+      const content = topTextboxInput
+
+      const payload = {
+        content
+      };
+
+      //console.log(payload)
+    
+      const response = await fetch(api_url + '/message/translate', {
+        method: 'POST',
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(payload)
+      }).then((response) => response.json())
+        .then((data) => {
+        setTopTextboxInput(data.text.replace(/[^\p{Emoji}\s]+/gu, '').replace(/\s{2,}/g, ' '));
       });
       //updateMessages();
     } catch (error) {
@@ -227,7 +328,7 @@ export default function Home() {
 
       //console.log(payload)
     
-      const response = await fetch('http://172.26.87.217:8080/message/translate', {
+      const response = await fetch(api_url + '/message/translate', {
         method: 'POST',
         headers: {
           "Content-Type": "application/json",
@@ -251,6 +352,74 @@ export default function Home() {
         </div>
         <div className="h-screen rounded-lg border border-gray-700 overflow-hidden">
           <div className="h-full flex flex-col w-100 max-w-[500px] max-w-screen bg-gray-50 dark:bg-[#181818] divide-y divide-gray-700 overflow-y-scroll">
+            {
+              <div>
+
+                <div
+                  className={`overflow-hidden transition-all duration-300 ease-in-out max-h-40`}
+                >
+                  <form id="top-text-form" onSubmit={handleSubmitTopTextbox} className="">
+                    <textarea
+                      title="🚫🔤"
+                      value={topTextboxInput}
+                      style={{resize: "none"}}
+                      onChange={(e)=>{
+                        handleChangeTopTextbox(e);
+                        /*
+                        const value = textboxInput;
+                          const emojiRegex = /^[\p{Emoji}\s\n]+$/u
+                          if (emojiRegex.test(value) || value === '') {
+                            console.log('qweqweqwe');
+                            (e.target as HTMLTextAreaElement).setCustomValidity('')
+                          } else {
+                            console.log('kkk');
+                            (e.target as HTMLTextAreaElement).setCustomValidity('🚫🔤')
+                        }*/
+                      }}
+                      className="h-auto w-50 sm:w-100 p-2 rounded-lg accent-transparent focus:outline-hidden"
+                      placeholder="🗣️🗣️🗣️"
+                      required
+                      //onInvalid={e => (e.target as HTMLInputElement).setCustomValidity('‼️')}
+                    />
+                    
+                  </form>
+                </div>
+
+                <div className={`flex w-full justify-between p-2`}>
+
+                  <div className="flex">
+                    <button
+                      onClick={()=>{setTopTextboxInput('')}}
+                      className={`rounded-lg transition duration-300`}
+                    >
+                      🧹
+                    </button>
+
+                    <div className={`ms-2 transition duration-500 ${ topTextboxValid ? 'opacity-0' : 'opacity-100' }`}>
+                      🚫🔤
+                    </div>
+
+                  </div>
+
+
+                  <div className="flex">
+                    <button
+                      onClick={handleTranslateTopTextbox}
+                      className={`bg-transparent cursor-pointer rounded-lg focus:outline-none rounded-lg text-white transition duration-300`}
+                    >
+                      🤖
+                    </button>
+                    <button
+                      form="top-text-form"
+                      type="submit"
+                      className={`bg-transparent cursor-pointer text-white rounded-lg focus:outline-none rounded-lg text-white transition duration-300 ms-2`}
+                    >
+                      📢
+                    </button>
+                  </div>
+                </div>
+              </div>
+            }
             {
               !loading &&
               data.map((e) => (
