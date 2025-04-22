@@ -245,12 +245,12 @@ export default function Home() {
 
   return (
     <div className="font-[family-name:var(--font-geist-sans)] h-screen overflow-hidden">
-      <main className="flex flex-col items-center">
+      <main className="flex flex-col items-center bg-gray-100 dark:bg-black">
         <div className="p-3">
           💬
         </div>
         <div className="h-screen rounded-lg border border-gray-700 overflow-hidden">
-          <div className="h-full flex flex-col w-100 max-w-[500px] max-w-screen bg-white dark:bg-[#181818] divide-y divide-gray-700 overflow-y-scroll">
+          <div className="h-full flex flex-col w-100 max-w-[500px] max-w-screen bg-gray-50 dark:bg-[#181818] divide-y divide-gray-700 overflow-y-scroll">
             {
               !loading &&
               data.map((e) => (
@@ -319,12 +319,14 @@ export default function Home() {
           </div>
         </div>
       </main>
-      <footer className="fixed bottom-0 right-0 mb-6 me-6 flex flex-col flex-wrap items-center justify-end
-        bg-white dark:bg-[#181818] rounded-lg border border-gray-700">
+      <footer className={`fixed bottom-0 right-0 mb-6 me-6 flex flex-col flex-wrap items-center justify-end
+        bg-white dark:bg-[#181818] rounded-lg  ${
+          textboxExpanded ? 'border border-gray-700' : ''
+        }`}>
 
         <button
             onClick={handleExpandTextBox}
-            className={`rounded-lg bg-blue-500 text-white p-2 transition duration-300 ${
+            className={`rounded-lg border bg-blue-500 text-white p-2 transition duration-300 border border-gray-700 ${
               textboxExpanded ? 'hidden' : ''
             }`}
           >
