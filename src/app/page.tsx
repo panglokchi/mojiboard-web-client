@@ -1,4 +1,5 @@
 'use client'
+import { get } from 'http';
 import { useState, useEffect } from 'react';
 
 export default function Home() {
@@ -8,14 +9,21 @@ export default function Home() {
   const [textboxExpanded, setTextboxExpanded] = useState(false);
   const [textboxInput, setTextboxInput] = useState('');
   const [textboxValid, setTextboxValid] = useState(true);
+  const [textboxTranslateLoading, setTextboxTranslateLoading] = useState(false);
+  const [textboxPostLoading, setTextboxPostLoading] = useState(false);
 
   const [topTextboxExpanded, setTopTextboxExpanded] = useState(false);
   const [topTextboxInput, setTopTextboxInput] = useState('');
   const [topTextboxValid, setTopTextboxValid] = useState(true);
+  const [topTextboxTranslateLoading, setTopTextboxTranslateLoading] = useState(false);
+  const [topTextboxPostLoading, setTopTextboxPostLoading] = useState(false);
 
   const [showComments, setShowComments] = useState<number|null>(null)
   const [commentInput, setCommentInput] = useState('');
   const [commentInputValid, setCommentInputValid] = useState(true);
+  const [commentTranslateLoading, setCommentTranslateLoading] = useState(false);
+  const [commentPostLoading, setCommentPostLoading] = useState(false);
+
   const [comments, setComments] = useState<any[]|null>(null)
   const api_url = process.env.NEXT_PUBLIC_API_URL;
 
@@ -53,7 +61,7 @@ export default function Home() {
         console.log("Only emojis")
         return;
       }
-      
+      setTextboxPostLoading(true);
 
       const lines = textboxInput.split('\n');
       const title = lines[0]; // First line as title
@@ -74,11 +82,14 @@ export default function Home() {
           "Content-Type": "application/json",
         },
         body: JSON.stringify(payload)
+      }).then((response) => {
+        setTextboxInput(''); // Clear the input after submission
+        updateMessages();
+        setTextboxPostLoading(false);
+        setTextboxExpanded(false);
       });
       //console.log('Response:', response.json);
-      setTextboxInput(''); // Clear the input after submission
-      setTextboxExpanded(false); // Optionally collapse after submission
-      updateMessages();
+
     } catch (error) {
       console.error('Error:', error);
     }
@@ -99,7 +110,7 @@ export default function Home() {
         console.log("Only emojis")
         return;
       }
-      
+      setTopTextboxPostLoading(true);
 
       const lines = topTextboxInput.split('\n');
       const title = lines[0]; // First line as title
@@ -120,10 +131,12 @@ export default function Home() {
           "Content-Type": "application/json",
         },
         body: JSON.stringify(payload)
+      }).then((response) => {
+        //console.log('Response:', response.json);
+        setTopTextboxInput(''); // Clear the input after submission
+        updateMessages();
+        setTopTextboxPostLoading(false);
       });
-      //console.log('Response:', response.json);
-      setTopTextboxInput(''); // Clear the input after submission
-      updateMessages();
     } catch (error) {
       console.error('Error:', error);
     }
@@ -225,6 +238,7 @@ export default function Home() {
   const handleSubmitComment = async (e: React.ChangeEvent<any>) => {
     e.preventDefault();
     try {
+      setCommentPostLoading(true);
       if (!commentInputValid) return;
       if (showComments == null) return;
 
@@ -249,12 +263,15 @@ export default function Home() {
           "Content-Type": "application/json",
         },
         body: JSON.stringify(payload)
+      }).then((response) => {
+        //console.log('Response:', response.json);
+        setCommentInput(''); // Clear the input after submission
+        //updateMessages();
+        loadComments(showComments);
+        data.find(i => i.id == showComments).totalChildrenCount += 1;
+        setCommentPostLoading(false);
       });
-      //console.log('Response:', response.json);
-      setCommentInput(''); // Clear the input after submission
-      //updateMessages();
-      loadComments(showComments);
-      data.find(i => i.id == showComments).totalChildrenCount += 1;
+
     } catch (error) {
       //console.error('Error:', error);
     }
@@ -263,7 +280,7 @@ export default function Home() {
   const handleTranslate = async (e: React.ChangeEvent<any>) => {
     e.preventDefault();
     try {
-
+      setTextboxTranslateLoading(true);
       const content = textboxInput
 
       const payload = {
@@ -281,6 +298,7 @@ export default function Home() {
       }).then((response) => response.json())
         .then((data) => {
         setTextboxInput(data.text.replace(/[^\p{Emoji}\s]+/gu, '').replace(/\s{2,}/g, ' '));
+        setTextboxTranslateLoading(false);
       });
       //updateMessages();
     } catch (error) {
@@ -291,7 +309,7 @@ export default function Home() {
   const handleTranslateTopTextbox = async (e: React.ChangeEvent<any>) => {
     e.preventDefault();
     try {
-
+      setTopTextboxTranslateLoading(true);
       const content = topTextboxInput
 
       const payload = {
@@ -309,6 +327,7 @@ export default function Home() {
       }).then((response) => response.json())
         .then((data) => {
         setTopTextboxInput(data.text.replace(/[^\p{Emoji}\s]+/gu, '').replace(/\s{2,}/g, ' '));
+        setTopTextboxTranslateLoading(false);
       });
       //updateMessages();
     } catch (error) {
@@ -319,7 +338,7 @@ export default function Home() {
   const handleTranslateComment = async (e: React.ChangeEvent<any>) => {
     e.preventDefault();
     try {
-
+      setCommentTranslateLoading(true);
       const content = commentInput
 
       const payload = {
@@ -337,11 +356,23 @@ export default function Home() {
       }).then((response) => response.json())
         .then((data) => {
         setCommentInput(data.text.replace(/[^\p{Emoji}\s]+/gu, '').replace(/\s{2,}/g, ' '));
+        setCommentTranslateLoading(false);
       });
       //updateMessages();
     } catch (error) {
       //console.error('Error:', error);
     }
+  };
+
+  const getSpinner = () => {
+    return (
+        <div role="status">
+            <svg aria-hidden="true" className="size-[1em] text-gray-200 animate-spin dark:text-gray-600 fill-blue-600 dark:fill-white" viewBox="0 0 100 101" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M100 50.5908C100 78.2051 77.6142 100.591 50 100.591C22.3858 100.591 0 78.2051 0 50.5908C0 22.9766 22.3858 0.59082 50 0.59082C77.6142 0.59082 100 22.9766 100 50.5908ZM9.08144 50.5908C9.08144 73.1895 27.4013 91.5094 50 91.5094C72.5987 91.5094 90.9186 73.1895 90.9186 50.5908C90.9186 27.9921 72.5987 9.67226 50 9.67226C27.4013 9.67226 9.08144 27.9921 9.08144 50.5908Z" fill="currentColor"/>
+                <path d="M93.9676 39.0409C96.393 38.4038 97.8624 35.9116 97.0079 33.5539C95.2932 28.8227 92.871 24.3692 89.8167 20.348C85.8452 15.1192 80.8826 10.7238 75.2124 7.41289C69.5422 4.10194 63.2754 1.94025 56.7698 1.05124C51.7666 0.367541 46.6976 0.446843 41.7345 1.27873C39.2613 1.69328 37.813 4.19778 38.4501 6.62326C39.0873 9.04874 41.5694 10.4717 44.0505 10.1071C47.8511 9.54855 51.7191 9.52689 55.5402 10.0491C60.8642 10.7766 65.9928 12.5457 70.6331 15.2552C75.2735 17.9648 79.3347 21.5619 82.5849 25.841C84.9175 28.9121 86.7997 32.2913 88.1811 35.8758C89.083 38.2158 91.5421 39.6781 93.9676 39.0409Z" fill="currentFill"/>
+            </svg>
+        </div>
+      )
   };
 
   return (
@@ -390,7 +421,7 @@ export default function Home() {
                   <div className="flex">
                     <button
                       onClick={()=>{setTopTextboxInput('')}}
-                      className={`rounded-lg transition duration-300`}
+                      className={`rounded-lg transition duration-300 cursor-pointer`}
                     >
                       🧹
                     </button>
@@ -405,16 +436,26 @@ export default function Home() {
                   <div className="flex">
                     <button
                       onClick={handleTranslateTopTextbox}
-                      className={`bg-transparent cursor-pointer rounded-lg focus:outline-none rounded-lg text-white transition duration-300`}
+                      className={`bg-transparent cursor-pointer rounded-lg focus:outline-none rounded-lg transition duration-300`}
                     >
-                      🤖
+                      { !topTextboxTranslateLoading &&
+                        <div>🤖</div>
+                      }
+                      { topTextboxTranslateLoading &&
+                        getSpinner()
+                      }
                     </button>
                     <button
                       form="top-text-form"
                       type="submit"
                       className={`bg-transparent cursor-pointer text-white rounded-lg focus:outline-none rounded-lg text-white transition duration-300 ms-2`}
                     >
-                      📢
+                      { !topTextboxPostLoading &&
+                        <div className={`${ topTextboxValid ? '' : 'cursor-not-allowed' }`}>📢</div>
+                      }
+                      { topTextboxPostLoading &&
+                        getSpinner()
+                      }
                     </button>
                   </div>
                 </div>
@@ -454,14 +495,24 @@ export default function Home() {
                                 onClick={handleTranslateComment}
                                 className={`bg-transparent cursor-pointer rounded-lg focus:outline-none rounded-lg`}
                               >
-                                🤖
+                                { !commentTranslateLoading &&
+                                  <div>🤖</div>
+                                }
+                                { commentTranslateLoading &&
+                                  getSpinner()
+                                }
                               </button>
                               <button
                                 form="comment-form"
                                 type="submit"
                                 className={`bg-transparent text-white rounded-lg focus:outline-none rounded-lg bg-blue-500 text-white p-1`}
                               >
-                                📢
+                                { !commentPostLoading &&
+                                    <div className={`${ commentInputValid ? '' : 'cursor-not-allowed' }`}>📢</div>
+                                }
+                                { commentPostLoading &&
+                                  getSpinner()
+                                }
                               </button>
                             </form>
                             <div className={`absolute inset-x-0 -top-6 w-full text-right transition duration-500 ${ commentInputValid ? 'opacity-0' : 'opacity-100' }`}>
@@ -560,7 +611,11 @@ export default function Home() {
                 textboxExpanded ? '' : 'hidden'
               }`}
             >
-              🤖
+              { !textboxTranslateLoading && <div>🤖</div>
+              }
+              { textboxTranslateLoading &&
+                getSpinner()
+              }
             </button>
             <button
               form="text-form"
@@ -569,7 +624,12 @@ export default function Home() {
                 textboxExpanded ? '' : 'hidden'
               }`}
             >
-              📢
+              { !textboxPostLoading &&
+                  <div className={`${ textboxValid ? '' : 'cursor-not-allowed' }`}>📢</div>
+              }
+              { textboxPostLoading &&
+                getSpinner()
+              }
             </button>
           </div>
         </div>
